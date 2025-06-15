@@ -1,0 +1,48 @@
+from fastapi import FastAPI, Request, HTTPException from fastapi.middleware.cors import CORSMiddleware import openai import os import logging
+
+Set up logging
+
+logging.basicConfig(level=logging.INFO) logger = logging.getLogger("customer-support-backend")
+
+Create FastAPI app
+
+app = FastAPI(title="AI Customer Support API", version="1.0")
+
+CORS Middleware for frontend connection
+
+app.add_middleware( CORSMiddleware, allow_origins=[""],  # Replace with your frontend domain in production allow_credentials=True, allow_methods=[""], allow_headers=["*"], )
+
+Load OpenAI API key
+
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+Root route
+
+@app.get("/") def read_root(): return {"message": "AI Customer Support Backend is running."}
+
+AI chat endpoint
+
+@app.post("/chat") async def chat_endpoint(request: Request): try: body = await request.json() user_message = body.get("message")
+
+if not user_message:
+        raise HTTPException(status_code=400, detail="Missing 'message' in request.")
+
+    logger.info(f"Received message: {user_message}")
+
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a professional and friendly AI customer service agent."},
+            {"role": "user", "content": user_message}
+        ]
+    )
+
+    reply = response.choices[0].message.content.strip()
+    logger.info(f"AI response: {reply}")
+
+    return {"reply": reply}
+
+except Exception as e:
+    logger.error(f"Error: {str(e)}")
+    raise HTTPException(status_code=500, detail="Something went wrong.")
+
